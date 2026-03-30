@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YEC AI Chat - Trợ lý Kinh tế học</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="dark-theme">
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="brand-info">
+                    <img src="assets/yec-logo.png" alt="YEC Logo" class="brand-logo" id="main-logo">
+                    <div class="brand-name">
+                        <span>Young Economists</span>
+                        <span class="club-text">Club</span>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="btn-new-chat" id="new-chat-btn">
+                <i class="fa-solid fa-plus"></i>
+                <span>Tạo chat mới</span>
+            </button>
+            
+            <div class="sidebar-section">
+                <p class="section-title">PHIÊN CHAT (1)</p>
+                <div class="chat-history-list" id="chat-history">
+                    <div class="chat-history-item active">
+                        <i class="fa-regular fa-message"></i>
+                        <div class="chat-item-info">
+                            <span class="chat-name">Phiên Chat 1</span>
+                            <span class="chat-id">#1h8suixa</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="sidebar-footer">
+                <div class="mascot-container">
+                    <img src="assets/yec-mascot.png" alt="YEC Mascot" class="mascot-img" id="mascot">
+                </div>
+                <div class="mascot-badge">Expert</div>
+            </div>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <main class="chat-main">
+            <header class="chat-header">
+                <div class="current-chat-info">
+                    <img src="assets/yec-logo.png" alt="Logo" class="mini-logo">
+                    <div>
+                        <h3>Phiên Chat 1</h3>
+                        <div class="status-group">
+                            <span class="status-dot"></span>
+                            <p>AI Online - ID: ses-9wk7lh8suixa</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="model-selector-container">
+                    <select id="model-select" class="model-select">
+                        <option value="nvidia/llama-3.1-nemotron-70b-instruct" selected>Nemotron 70B (Thông thái)</option>
+                        <option value="meta/llama-3.1-8b-instruct">Llama 3.1 8B (Tốc độ)</option>
+                        <option value="meta/llama-3.1-405b-instruct">Llama 3.1 405B (Vô đối)</option>
+                    </select>
+                </div>
+
+                <div class="header-actions">
+                    <div class="timer-badge">
+                        <i class="fa-regular fa-clock"></i>
+                        <span id="timer">00:00:00</span>
+                    </div>
+                    <button class="share-btn" id="share-chat-btn" title="Chia sẻ phiên chat">
+                        <i class="fa-solid fa-share-nodes"></i>
+                    </button>
+                    <div class="club-badge">Young Economists Club</div>
+                </div>
+            </header>
+
+            <div class="chat-container" id="chat-container">
+                <!-- Welcome Screen -->
+                <div class="welcome-screen" id="welcome-screen">
+                    <div class="welcome-logo">
+                        <img src="assets/yec-logo.png" alt="YEC Logo">
+                    </div>
+                    <h1>Xin chào! Tôi có thể giúp gì cho bạn?</h1>
+                    <p class="welcome-subtitle">Chúc các bạn có một phần thi thành công</p>
+                    
+                    <div class="suggestion-grid">
+                        <div class="suggestion-card">
+                            <i class="fa-solid fa-chart-line"></i>
+                            <span>Đánh giá thị trường: Phân tích biến động tài chính hiện tại</span>
+                        </div>
+                        <div class="suggestion-card">
+                            <i class="fa-solid fa-magnifying-glass-chart"></i>
+                            <span>Phân tích insight: Giải mã hành vi khách hàng qua dữ liệu</span>
+                        </div>
+                        <div class="suggestion-card">
+                            <i class="fa-solid fa-chess"></i>
+                            <span>Xây dựng chiến lược: Tối ưu mô hình tăng trưởng kinh tế bền vững</span>
+                        </div>
+                        <div class="suggestion-card">
+                            <i class="fa-solid fa-shield-halved"></i>
+                            <span>Dự báo rủi ro: Đánh giá tác động từ rủi ro hệ thống toàn cầu</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Chat Messages will appear here -->
+                <div class="messages-wrapper" id="messages-wrapper"></div>
+            </div>
+
+            <footer class="chat-footer">
+                <div class="input-container">
+                    <textarea id="chat-input" placeholder="Nhập tin nhắn... (Enter để gửi, Shift+Enter xuống dòng)" rows="1"></textarea>
+                    <div class="input-actions">
+                        <button class="action-btn" title="Thêm ảnh"><i class="fa-regular fa-image"></i></button>
+                        <button class="action-btn" title="Đính kèm"><i class="fa-solid fa-paperclip"></i></button>
+                        <button class="send-btn" id="send-btn" title="Gửi"><i class="fa-solid fa-paper-plane"></i></button>
+                    </div>
+                </div>
+                <p class="footer-note">Enter để gửi - Shift+Enter xuống dòng - Kéo thả hoặc đính kèm ảnh & tệp</p>
+            </footer>
+        </main>
+
+        <!-- Sponsors Sidebar -->
+        <aside class="sponsors-bar">
+            <h2 class="sponsors-title">NHÀ TÀI TRỢ <span>SPONSORS</span></h2>
+            <div class="sponsors-list">
+                <a href="https://vingroup.net" target="_blank" class="sponsor-item" title="Vingroup website">
+                    <img src="assets/Vingroup-logo.png" alt="Vingroup">
+                    <span>Vingroup</span>
+                </a>
+                <a href="https://viettel.com.vn" target="_blank" class="sponsor-item" title="Viettel website">
+                    <img src="assets/Viettel_logo.png" alt="Viettel">
+                    <span>Viettel</span>
+                </a>
+                <a href="https://acb.com.vn" target="_blank" class="sponsor-item" title="ACB website">
+                    <img src="assets/Asia_Commercial_Bank_logo.svg.png" alt="ACB">
+                    <span>ACB Bank</span>
+                </a>
+                <a href="https://sacombank.com.vn" target="_blank" class="sponsor-item" title="Sacombank website">
+                    <img src="assets/Logo-Sacombank-new.png" alt="Sacombank">
+                    <span>Sacombank</span>
+                </a>
+                <a href="https://hdbank.com.vn" target="_blank" class="sponsor-item" title="HDBank website">
+                    <img src="assets/HDBank-logo.png" alt="HDBank">
+                    <span>HDBank</span>
+                </a>
+                <a href="https://msb.com.vn" target="_blank" class="sponsor-item" title="MSB website">
+                    <img src="assets/MSB-logo.png" alt="MSB">
+                    <span>MSB Bank</span>
+                </a>
+                <a href="https://nvidia.com" target="_blank" class="sponsor-item gemini" title="NVIDIA AI website">
+                    <img src="assets/nvidia-logo.png" alt="NVIDIA">
+                    <span>Powered by NVIDIA</span>
+                </a>
+            </div>
+        </aside>
+    </div>
+    <script src="main.js"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables (Dùng để giấu API Key)
+.env
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files from Antigravity/Gemini
+.gemini/
+brain/
+tmp/
+node_modules/
