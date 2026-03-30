@@ -34,10 +34,11 @@ chatInput.addEventListener('input', function() {
     this.style.height = (this.scrollHeight) + 'px';
 });
 
-// Real AI Response Logic (NVIDIA NIM VIA LOCAL PROXY)
+// Real AI Response Logic (NVIDIA NIM VIA NETLIFY PROXY)
 async function callNvidiaAPI(userText) {
     const selectedModel = modelSelect.value;
-    const url = `/api/chat`; // Local proxy endpoint
+    const url = `/.netlify/functions/chat`; // Netlify Serverless endpoint
+
     
     // Add user message to history
     conversationHistory.push({ role: "user", content: userText });

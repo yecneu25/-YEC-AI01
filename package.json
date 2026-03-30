@@ -1,0 +1,11 @@
+{
+  "name": "yec-ai-chat",
+  "version": "1.0.0",
+  "description": "YEC AI Chat with NVIDIA NIM and Netlify Functions",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
