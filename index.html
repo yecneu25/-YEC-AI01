@@ -64,15 +64,6 @@
                         </div>
                     </div>
                 </div>
-
-                <div class="model-selector-container">
-                    <select id="model-select" class="model-select">
-                        <option value="nvidia/llama-3.1-nemotron-70b-instruct" selected>Nemotron 70B (Thông thái)</option>
-                        <option value="meta/llama-3.1-8b-instruct">Llama 3.1 8B (Tốc độ)</option>
-                        <option value="meta/llama-3.1-405b-instruct">Llama 3.1 405B (Vô đối)</option>
-                    </select>
-                </div>
-
                 <div class="header-actions">
                     <div class="timer-badge">
                         <i class="fa-regular fa-clock"></i>
@@ -80,6 +71,9 @@
                     </div>
                     <button class="share-btn" id="share-chat-btn" title="Chia sẻ phiên chat">
                         <i class="fa-solid fa-share-nodes"></i>
+                    </button>
+                    <button class="settings-btn" id="settings-btn" title="Cài đặt">
+                        <i class="fa-solid fa-gear"></i>
                     </button>
                     <div class="club-badge">Young Economists Club</div>
                 </div>
@@ -166,6 +160,53 @@
             </div>
         </aside>
     </div>
+
+    <!-- Settings Panel -->
+    <div class="settings-overlay" id="settings-overlay">
+        <div class="settings-panel" id="settings-panel">
+            <div class="settings-header">
+                <h2><i class="fa-solid fa-gear"></i> Cài đặt</h2>
+                <button class="settings-close-btn" id="settings-close-btn">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="settings-body">
+                <p class="settings-section-title">Giao diện</p>
+                <div class="settings-row">
+                    <div class="settings-row-info">
+                        <span class="settings-row-label">Chủ đề màu sắc</span>
+                        <span class="settings-row-desc">Chuyển đổi giữa giao diện tối và sáng</span>
+                    </div>
+                    <div class="theme-toggle-group">
+                        <button class="theme-toggle-btn active" id="btn-dark-theme" title="Giao diện tối">
+                            <i class="fa-solid fa-moon"></i> Tối
+                        </button>
+                        <button class="theme-toggle-btn" id="btn-light-theme" title="Giao diện sáng">
+                            <i class="fa-solid fa-sun"></i> Sáng
+                        </button>
+                    </div>
+                </div>
+
+                <p class="settings-section-title">Thông tin hệ thống</p>
+                <div class="settings-row">
+                    <div class="settings-row-info">
+                        <span class="settings-row-label">Phiên bản</span>
+                        <span class="settings-row-desc">YEC AI Chat v1.2.0</span>
+                    </div>
+                    <span style="font-size:0.8rem;color:var(--primary-orange);font-weight:600;">Stable</span>
+                </div>
+                <div class="settings-row">
+                    <div class="settings-row-info">
+                        <span class="settings-row-label">Powered by</span>
+                        <span class="settings-row-desc">NVIDIA NIM API · integrate.api.nvidia.com</span>
+                    </div>
+                    <i class="fa-solid fa-microchip" style="color:var(--primary-orange);"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script must be LAST so all DOM elements exist when JS runs -->
     <script src="main.js"></script>
 </body>
 </html>
