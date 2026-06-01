@@ -36,23 +36,22 @@ chatInput.addEventListener('input', function() {
 // Real AI Response Logic (n8n Webhook)
 // Real AI Response Logic (n8n Webhook)
 async function callN8nWebhook(userText) {
-    // Tự động xác định URL proxy dựa trên môi trường chạy:
-    // - Netlify production → dùng Netlify Serverless Function
-    // - Local (file:// hoặc cổng khác 3000) → dùng proxy server local
-    // - Local cổng 3000 → dùng relative path /api/n8n
-    let n8nWebhookUrl;
+    const DIRECT_N8N_URL = 'https://n8n.yecneu.com/webhook/56fadfb7-5418-4bc3-b3d1-51d0f9f7324d';
+    
+    // Tự động xác định URL proxy dự phòng nếu cuộc gọi trực tiếp bị lỗi CORS:
+    let proxyWebhookUrl;
     const isLocalFile = window.location.protocol === 'file:';
     const isLocalAddress = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
     if (!isLocalFile && !isLocalAddress) {
         // Netlify hoặc host production khác
-        n8nWebhookUrl = '/.netlify/functions/n8n';
+        proxyWebhookUrl = '/.netlify/functions/n8n';
     } else if (isLocalFile || (isLocalAddress && window.location.port !== '3000')) {
         // file:// hoặc cổng khác (Live Server 5500...)
-        n8nWebhookUrl = 'http://localhost:3000/api/n8n';
+        proxyWebhookUrl = 'http://localhost:3000/api/n8n';
     } else {
         // localhost:3000 - server local đang chạy
-        n8nWebhookUrl = '/api/n8n';
+        proxyWebhookUrl = '/api/n8n';
     }
     
     // Add user message to history
@@ -65,8 +64,13 @@ async function callN8nWebhook(userText) {
         history: conversationHistory
     };
 
+    let response;
+    let usedProxy = false;
+
     try {
-        const response = await fetch(n8nWebhookUrl, {
+        console.log("⚡ Đang thử kết nối TRỰC TIẾP đến n8n để tối ưu tốc độ và tránh timeout...");
+        // Thử gọi trực tiếp trước
+        response = await fetch(DIRECT_N8N_URL, {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json'
@@ -74,15 +78,77 @@ async function callN8nWebhook(userText) {
             body: JSON.stringify(payload)
         });
 
-        // Kiểm tra nếu HTTP status không thành công
         if (!response.ok) {
             throw new Error(`HTTP_${response.status}`);
         }
+    } catch (directError) {
+        console.warn("⚠️ Gọi trực tiếp thất bại (có thể do chưa bật CORS hoặc mất mạng). Đang thử qua Server Proxy dự phòng...", directError);
+        
+        try {
+            usedProxy = true;
+            response = await fetch(proxyWebhookUrl, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
 
+            if (!response.ok) {
+                throw new Error(`HTTP_${response.status}`);
+            }
+        } catch (proxyError) {
+            console.error("🔴 Cả kết nối trực tiếp và proxy đều thất bại:", proxyError);
+            
+            // Xóa tin nhắn cuối khỏi lịch sử nếu lỗi
+            const lastMsg = conversationHistory[conversationHistory.length - 1];
+            if (lastMsg && lastMsg.role === 'user' && lastMsg.content === userText) {
+                conversationHistory.pop();
+            }
+
+            let errorMsg = proxyError.message;
+            let suggestion = "Hãy kiểm tra URL webhook hoặc trạng thái workflow n8n.";
+
+            // Nhận diện lỗi HTTP
+            if (proxyError.message.startsWith("HTTP_")) {
+                const statusCode = proxyError.message.split("_")[1];
+                errorMsg = `Mã lỗi HTTP ${statusCode}`;
+                
+                if (statusCode === "524") {
+                    errorMsg = "Quá thời gian phản hồi (Cloudflare Timeout 524)";
+                    suggestion = "Workflow n8n xử lý mất hơn 100 giây nên Cloudflare đã tự động ngắt kết nối.<br><br>" +
+                        "👉 <strong>Cách khắc phục triệt để:</strong><br>" +
+                        "1. Đăng nhập vào tài khoản <strong>Cloudflare</strong> của bạn.<br>" +
+                        "2. Tìm đến cấu hình DNS của domain <code>yecneu.com</code>.<br>" +
+                        "3. Tìm bản ghi subdomain <code>n8n</code> và chuyển trạng thái Proxy (đám mây màu cam) sang <strong>DNS Only</strong> (đám mây màu xám).<br>" +
+                        "4. Việc này giúp trình duyệt kết nối trực tiếp tới n8n của bạn mà không bị Cloudflare giới hạn 100s.";
+                } else if (statusCode === "504" || statusCode === "502") {
+                    errorMsg = "Lỗi cổng kết nối (Gateway Timeout - Giới hạn 10s Netlify)";
+                    suggestion = "Do câu trả lời AI mất nhiều thời gian, Serverless Function của Netlify (giới hạn 10-26 giây) đã tự động ngắt kết nối trước khi n8n xử lý xong.<br><br>" +
+                        "👉 <strong>Cách khắc phục triệt để:</strong> Bạn cần bật CORS trên n8n để trình duyệt gọi trực tiếp n8n mà không cần đi qua Netlify:<br>" +
+                        "1. Mở giao diện thiết kế workflow trong <strong>n8n</strong>.<br>" +
+                        "2. Nhấp đúp vào Node <strong>Webhook</strong> đầu tiên.<br>" +
+                        "3. Tại cột cài đặt bên phải, cuộn xuống phần <strong>Settings / Options</strong> -> bấm <strong>Add Option</strong> -> chọn <strong>CORS</strong>.<br>" +
+                        "4. Bật công tắc CORS sang màu xanh (cho phép mọi nguồn kết nối) -> Bấm <strong>Save</strong> workflow.<br>" +
+                        "5. Sau khi bật, giao diện chat sẽ tự động kết nối trực tiếp đến n8n của bạn, loại bỏ hoàn toàn giới hạn 10s của Netlify!";
+                }
+            } else if (proxyError.message === "Failed to fetch" || proxyError.name === "TypeError") {
+                errorMsg = "Không kết nối được tới máy chủ";
+                if (isLocalFile) {
+                    suggestion = "Bạn đang mở trực tiếp file HTML (giao thức <strong>file://</strong>). Trình duyệt chặn các yêu cầu mạng vì lý do bảo mật.<br>👉 <strong>Cách khắc phục:</strong> Hãy mở Terminal tại thư mục dự án, chạy lệnh <code>npm start</code> rồi truy cập địa chỉ <strong>http://localhost:3000</strong>.";
+                } else {
+                    suggestion = "Server proxy local (cổng 3000) chưa được khởi động.<br>👉 <strong>Cách khắc phục:</strong> Hãy mở Terminal tại thư mục dự án và chạy lệnh <code>npm start</code> để bắt đầu server.";
+                }
+            }
+
+            return `⚠️ Có lỗi xảy ra khi kết nối n8n: ${errorMsg}. <br><br>💡 Gợi ý: ${suggestion}`;
+        }
+    }
+
+    try {
         // Đọc dữ liệu dạng text trước để tránh lỗi "Unexpected end of JSON input" nếu n8n trả về rỗng
         const textResponse = await response.text();
         
-
         let data = {};
         if (textResponse) {
             try {
@@ -99,9 +165,7 @@ async function callN8nWebhook(userText) {
             }
         }
         
-        // 🔴 BƯỚC 2: CHỈNH SỬA CÁCH LẤY KẾT QUẢ TỪ N8N
         // Tuỳ thuộc vào node "Webhook Response" trong n8n của bạn trả về cấu trúc nào.
-        // Ví dụ n8n trả về: { "output": "Câu trả lời của AI..." }
         const aiText = data.output || data.text || data.response || data.message || (typeof data === 'string' ? data : JSON.stringify(data));
         
         if (!aiText) {
@@ -112,38 +176,12 @@ async function callN8nWebhook(userText) {
         conversationHistory.push({ role: "assistant", content: aiText });
         return aiText;
     } catch (error) {
-        console.error("N8n Webhook Error:", error);
+        console.error("Error parsing response:", error);
         const lastMsg = conversationHistory[conversationHistory.length - 1];
         if (lastMsg && lastMsg.role === 'user' && lastMsg.content === userText) {
             conversationHistory.pop();
         }
-        
-        let errorMsg = error.message;
-        let suggestion = "Hãy kiểm tra URL webhook hoặc trạng thái workflow n8n.";
-        
-        // Nhận diện lỗi HTTP trả về từ server/proxy
-        if (error.message.startsWith("HTTP_")) {
-            const statusCode = error.message.split("_")[1];
-            errorMsg = `Mã lỗi HTTP ${statusCode}`;
-            if (statusCode === "524") {
-                errorMsg = "Quá thời gian phản hồi (Cloudflare Timeout 524)";
-                suggestion = "Workflow n8n xử lý mất hơn 100 giây nên Cloudflare đã tự động ngắt kết nối trước khi nhận được phản hồi.<br>👉 <strong>Cách khắc phục:</strong><br>1. Hãy kiểm tra xem workflow n8n có bước nào bị lặp hoặc chạy quá chậm không.<br>2. Tối ưu hóa phản hồi của AI (ví dụ: dùng model nhanh hơn, giảm max tokens phản hồi, hoặc tăng tốc độ API).";
-            } else if (statusCode === "504" || statusCode === "502") {
-                errorMsg = "Lỗi cổng kết nối (Gateway Error)";
-                suggestion = "Dịch vụ n8n của bạn đang không phản hồi hoặc bị quá tải. Hãy kiểm tra xem server n8n có hoạt động bình thường không.";
-            }
-        } 
-        // Nhận diện lỗi kết nối mạng (Failed to fetch)
-        else if (error.message === "Failed to fetch" || error.name === "TypeError") {
-            errorMsg = "Không kết nối được tới máy chủ";
-            if (isLocalFile) {
-                suggestion = "Bạn đang mở trực tiếp file HTML (giao thức <strong>file://</strong>). Trình duyệt chặn các yêu cầu mạng vì lý do bảo mật.<br>👉 <strong>Cách khắc phục:</strong> Hãy mở Terminal tại thư mục dự án, chạy lệnh <code>npm start</code> rồi truy cập địa chỉ <strong>http://localhost:3000</strong>.";
-            } else {
-                suggestion = "Server proxy local (cổng 3000) chưa được khởi động.<br>👉 <strong>Cách khắc phục:</strong> Hãy mở Terminal tại thư mục dự án và chạy lệnh <code>npm start</code> để bắt đầu server.";
-            }
-        }
-        
-        return `⚠️ Có lỗi xảy ra khi kết nối n8n: ${errorMsg}. <br><br>💡 Gợi ý: ${suggestion}`;
+        return `⚠️ Lỗi xử lý phản hồi từ n8n: ${error.message}`;
     }
 }
 
