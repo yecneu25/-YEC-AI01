@@ -39,16 +39,17 @@ exports.handler = async (event, context) => {
     };
 
     const req = https.request(options, (res) => {
-      let data = '';
-      res.on('data', (chunk) => { data += chunk; });
+      const chunks = [];
+      res.on('data', (chunk) => { chunks.push(chunk); });
       res.on('end', () => {
+        const bodyBuffer = Buffer.concat(chunks);
         resolve({
           statusCode: res.statusCode,
           headers: {
             'Content-Type': res.headers['content-type'] || 'application/json',
             'Access-Control-Allow-Origin': '*'
           },
-          body: data
+          body: bodyBuffer.toString('utf-8')
         });
       });
     });

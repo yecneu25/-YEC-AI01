@@ -1,3 +1,131 @@
+// ===== BUILT-IN MARKDOWN PARSER (No CDN required) =====
+function parseMarkdown(text) {
+    if (!text) return '';
+
+    const lines = text.split('\n');
+    let html = '';
+    let i = 0;
+
+    while (i < lines.length) {
+        const line = lines[i];
+
+        // --- Horizontal Rule ---
+        if (/^(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) {
+            html += '<hr>';
+            i++;
+            continue;
+        }
+
+        // --- Headings ---
+        const headingMatch = line.match(/^(#{1,6})\s+(.+)/);
+        if (headingMatch) {
+            const level = headingMatch[1].length;
+            html += `<h${level}>${parseInline(headingMatch[2])}</h${level}>`;
+            i++;
+            continue;
+        }
+
+        // --- Fenced Code Block ---
+        if (line.startsWith('```')) {
+            let code = '';
+            i++;
+            while (i < lines.length && !lines[i].startsWith('```')) {
+                code += escapeHtml(lines[i]) + '\n';
+                i++;
+            }
+            html += `<pre><code>${code.trimEnd()}</code></pre>`;
+            i++;
+            continue;
+        }
+
+        // --- GFM Table ---
+        if (line.includes('|') && i + 1 < lines.length && /^[\s|:\-]+$/.test(lines[i + 1])) {
+            const headers = line.split('|').map(h => h.trim()).filter(h => h !== '');
+            const alignRow = lines[i + 1].split('|').map(a => a.trim()).filter(a => a !== '');
+            const aligns = alignRow.map(a => {
+                if (a.startsWith(':') && a.endsWith(':')) return 'center';
+                if (a.endsWith(':')) return 'right';
+                return 'left';
+            });
+            let tableHtml = '<table><thead><tr>';
+            headers.forEach((h, idx) => {
+                tableHtml += `<th style="text-align:${aligns[idx] || 'left'}">${parseInline(h)}</th>`;
+            });
+            tableHtml += '</tr></thead><tbody>';
+            i += 2;
+            while (i < lines.length && lines[i].includes('|') && lines[i].trim() !== '') {
+                const cells = lines[i].split('|').map(c => c.trim()).filter((_, idx, arr) => !(idx === 0 && _ === '') && !(idx === arr.length - 1 && _ === ''));
+                tableHtml += '<tr>';
+                cells.forEach((c, idx) => {
+                    tableHtml += `<td style="text-align:${aligns[idx] || 'left'}">${parseInline(c)}</td>`;
+                });
+                tableHtml += '</tr>';
+                i++;
+            }
+            tableHtml += '</tbody></table>';
+            html += tableHtml;
+            continue;
+        }
+
+        // --- Unordered List ---
+        if (/^[\-\*\+]\s/.test(line)) {
+            html += '<ul>';
+            while (i < lines.length && /^[\-\*\+]\s/.test(lines[i])) {
+                html += `<li>${parseInline(lines[i].replace(/^[\-\*\+]\s/, ''))}</li>`;
+                i++;
+            }
+            html += '</ul>';
+            continue;
+        }
+
+        // --- Ordered List ---
+        if (/^\d+\.\s/.test(line)) {
+            html += '<ol>';
+            while (i < lines.length && /^\d+\.\s/.test(lines[i])) {
+                html += `<li>${parseInline(lines[i].replace(/^\d+\.\s/, ''))}</li>`;
+                i++;
+            }
+            html += '</ol>';
+            continue;
+        }
+
+        // --- Empty Line ---
+        if (line.trim() === '') {
+            i++;
+            continue;
+        }
+
+        // --- Paragraph ---
+        html += `<p>${parseInline(line)}</p>`;
+        i++;
+    }
+
+    return html;
+}
+
+function parseInline(text) {
+    return text
+        // Bold + Italic
+        .replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>')
+        // Bold
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/__(.*?)__/g, '<strong>$1</strong>')
+        // Italic
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/_(.*?)_/g, '<em>$1</em>')
+        // Inline Code
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        // Links
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
+        // Emoji shortcodes are kept as-is
+        ;
+}
+
+function escapeHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+// ===== END MARKDOWN PARSER =====
+
 const chatInput = document.getElementById('chat-input');
 const sendBtn = document.getElementById('send-btn');
 const messagesWrapper = document.getElementById('messages-wrapper');
@@ -73,7 +201,7 @@ async function callN8nWebhook(userText) {
         response = await fetch(DIRECT_N8N_URL, {
             method: 'POST',
             headers: { 
-                'Content-Type': 'application/json'
+                'Content-Type': 'text/plain'
             },
             body: JSON.stringify(payload)
         });
@@ -247,10 +375,8 @@ function addMessage(text, sender) {
         '<div class="message-avatar"><i class="fa-solid fa-user"></i></div>' : 
         `<img src="assets/yec-logo.png" alt="YEC" class="message-avatar">`;
 
-    // Format text: Convert **bold** to <strong> and handle line breaks
-    let formattedText = text
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\n/g, '<br>');
+    // Format text using the built-in Markdown parser
+    let formattedText = (sender === 'ai') ? parseMarkdown(text) : `<p>${text.replace(/\n/g, '<br>')}</p>`;
 
     messageDiv.innerHTML = `
         ${avatarImg}
